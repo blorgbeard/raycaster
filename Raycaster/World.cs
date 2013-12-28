@@ -120,6 +120,11 @@ namespace Raycaster
             return new Vector2D(point.X, point.Y);
         }
 
+        public static implicit operator PointF(Vector2D vector)
+        {
+            return new PointF(vector.X, vector.Y);
+        }
+
         public static Vector2D operator +(Vector2D first, Vector2D second)
         {
             return new Vector2D(first.X + second.X, first.Y + second.Y);
@@ -223,7 +228,9 @@ namespace Raycaster
 
     class Rectangle2D : Shape2D
     {
-        public RectangleF Bounds { get; set; }        
+        public RectangleF Bounds { get; set; }
+
+        public int ColorIndex { get; set; }
 
         public override float IntersectRay(Ray ray)
         {

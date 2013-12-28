@@ -14,23 +14,26 @@ namespace Raycaster
     public partial class Form1 : Form
     {
 
-        List<Shape2D> Blocks;
+        List<Rectangle2D> Blocks;
 
         Ray Player;
 
-        Bitmap bmp = new Bitmap(320, 240);
+        Bitmap Buffer3D = new Bitmap(320, 240);
+        Bitmap BufferMap = new Bitmap(240, 240);
 
-
-        private List<Shape2D> BuildBlocksFromMap(byte[,] map)
+        private List<Rectangle2D> BuildBlocksFromMap(byte[,] map)
         {
-            var result = new List<Shape2D>();
+            var result = new List<Rectangle2D>();
             for (int y = 0; y < map.GetLength(0); y++)
             {
                 for (int x = 0; x < map.GetLength(1); x++)
                 {
                     if (map[y, x] != 0)
                     {
-                        result.Add(new Rectangle2D() { Bounds = new RectangleF(x * 10, y * 10, 10, 10) });
+                        result.Add(new Rectangle2D() { 
+                            ColorIndex = map[y,x],
+                            Bounds = new RectangleF(x * 10, y * 10, 10, 10) 
+                        });
                     }
                 }
             }
@@ -42,16 +45,16 @@ namespace Raycaster
             InitializeComponent();
 
             byte[,] map = {
-                {1,1,1,1,1,1,1,1,1,1},
-                {1,0,0,0,0,0,0,0,0,1},
-                {1,0,0,0,1,1,0,0,0,1},
-                {1,0,1,0,0,0,0,0,0,1},
-                {1,0,1,0,0,0,0,1,0,1},
-                {1,1,1,0,0,0,0,1,0,1},
-                {1,0,0,0,1,0,0,1,1,1},
-                {1,0,0,0,1,0,0,0,0,1},
-                {1,0,0,0,1,0,0,0,0,1},
-                {1,1,1,1,1,1,1,1,1,1},    
+                {2,1,2,1,2,1,2,1,2,1},
+                {1,0,0,0,0,0,0,0,0,2},
+                {2,0,2,0,0,0,0,2,0,1},
+                {1,0,0,0,0,0,0,0,0,2},
+                {2,0,0,0,0,0,0,0,0,1},
+                {1,0,0,0,0,0,0,0,0,2},
+                {2,0,0,0,0,0,0,0,0,1},
+                {1,0,2,0,0,0,0,2,0,2},
+                {2,0,0,0,0,0,0,0,0,1},
+                {1,2,1,2,1,2,1,2,1,2},    
             };
 
             /*
@@ -69,7 +72,24 @@ namespace Raycaster
                 new Rectangle2D() { Bounds = new RectangleF(10000,0,1000,10000)}
             };*/
 
-            Player = new Ray(new Vector2D(0, 25), new Vector2D(1, 0));
+            Player = new Ray(new Vector2D(50, 50), new Vector2D(1, 0));
+        }
+
+        private void PaintMapBlocks(Graphics g)
+        {            
+            foreach (var shape in Blocks.OfType<Rectangle2D>())
+            {
+                g.FillRectangle(shape.Hit ? Brushes.Red : Brushes.Black, shape.Bounds);
+            }            
+        }
+
+        private void PaintMapPlayer(Graphics g)
+        {
+            g.FillEllipse(Brushes.Blue, new Rectangle((int)Player.Location.X - 3, (int)Player.Location.Y - 3, 6, 6));
+            /*g.DrawLine(Pens.Blue,
+                Player.Location.X, Player.Location.Y,
+                Player.Location.X + Player.Direction.X * 10,
+                Player.Location.Y + Player.Direction.Y * 10);*/
         }
 
         private void tmrTick_Tick(object sender, EventArgs e)
@@ -78,9 +98,13 @@ namespace Raycaster
             foreach (var shape in Blocks)
                 shape.Hit = false;
 
-            using (var g = Graphics.FromImage(bmp))
+            using (var map = Graphics.FromImage(BufferMap))
+            using (var gfx = Graphics.FromImage(Buffer3D))
             {
-                g.Clear(Color.Cornsilk);
+                gfx.Clear(Color.Cornsilk);
+                map.Clear(Color.White);
+                PaintMapBlocks(map);
+                //PaintMapPlayer(map);
 
                 float screenDistanceFromPlayer = 320F / (float)Math.Tan(Math.PI / 4);
                 for (int px = 0; px < 320; px++)
@@ -96,7 +120,7 @@ namespace Raycaster
                         Player.Location);
 
                     float closest = -1;
-                    Shape2D hit = null;
+                    Rectangle2D hit = null;
                     foreach (var shape in Blocks)
                     {
                         var d = shape.IntersectRay(ray);
@@ -108,18 +132,18 @@ namespace Raycaster
                         }
                     }
 
-                    if (hit != null)
-                        hit.Hit = true;
-                    
-                    if (closest >= 0)
-                    {
+                    if (hit != null) {
+                        hit.Hit = true;                                        
                         int sliceHeight = (int)Math.Min(240, Math.Max(0, Math.Abs(2400F / closest)));
                         int color = (int)(sliceHeight / 240F * 200);
-                        Pen pen = new Pen(Color.FromArgb(color, color, color));
-                        g.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+                        Pen pen = new Pen(Color.FromArgb(hit.ColorIndex == 1 ? color : 0, color, color));
+                        gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+
+                        map.DrawLine(pen, ray.Location, ray.Location + ray.Direction * closest);
                     }
 
                 }
+                PaintMapPlayer(map);
             }
             pictureBox1.Invalidate();
             pictureBox2.Invalidate();
@@ -128,7 +152,7 @@ namespace Raycaster
 
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.DrawImageUnscaled(bmp, 0, 0);            
+            e.Graphics.DrawImageUnscaled(Buffer3D, 0, 0);            
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -163,20 +187,8 @@ namespace Raycaster
 
         private void pictureBox2_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.Clear(Color.Cornsilk);
-            foreach (var shape in Blocks.OfType<Rectangle2D>())
-            {
-                e.Graphics.FillRectangle(shape.Hit ? Brushes.Red : Brushes.Black, shape.Bounds);
-            }
-
-            e.Graphics.FillEllipse(Brushes.Blue, new Rectangle((int)Player.Location.X - 4, (int)Player.Location.Y - 4, 8, 8));
-            e.Graphics.DrawLine(Pens.Blue, 
-                Player.Location.X, Player.Location.Y, 
-                Player.Location.X + Player.Direction.X * 10, 
-                Player.Location.Y + Player.Direction.Y * 10);
+            e.Graphics.DrawImageUnscaled(BufferMap, 0, 0);
         }
-
-
 
         private void pictureBox2_MouseDown(object sender, MouseEventArgs e)
         {
