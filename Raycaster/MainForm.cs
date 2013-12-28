@@ -11,7 +11,7 @@ using System.Windows.Forms;
 namespace Raycaster
 {    
 
-    public partial class Form1 : Form
+    public partial class MainForm : Form
     {
 
         List<Rectangle2D> Blocks;
@@ -40,7 +40,7 @@ namespace Raycaster
             return result;
         }
 
-        public Form1()
+        public MainForm()
         {
             InitializeComponent();
 
@@ -69,20 +69,7 @@ namespace Raycaster
                 
             };
 
-            /*
-            map = new byte [,] {
-                {0,0,1,1},
-                {0,0,0,1},
-                {0,0,0,1},
-                {0,0,1,1},                
-            };
-            //*/
             Blocks = BuildBlocksFromMap(map);
-
-            /*Blocks = new List<Shape2D>()
-            {
-                new Rectangle2D() { Bounds = new RectangleF(10000,0,1000,10000)}
-            };*/
 
             Player = new Ray(new Vector2D(50, 50), new Vector2D(1, 0));
         }
@@ -98,10 +85,6 @@ namespace Raycaster
         private void PaintMapPlayer(Graphics g)
         {
             g.FillEllipse(Brushes.Blue, new Rectangle((int)Player.Location.X - 3, (int)Player.Location.Y - 3, 6, 6));
-            /*g.DrawLine(Pens.Blue,
-                Player.Location.X, Player.Location.Y,
-                Player.Location.X + Player.Direction.X * 10,
-                Player.Location.Y + Player.Direction.Y * 10);*/
         }
 
         private void tmrTick_Tick(object sender, EventArgs e)
@@ -115,8 +98,7 @@ namespace Raycaster
             {
                 gfx.Clear(Color.Cornsilk);
                 map.Clear(Color.White);
-                PaintMapBlocks(map);
-                //PaintMapPlayer(map);
+                PaintMapBlocks(map);                
 
                 float screenDistanceFromPlayer = 320F / (float)Math.Tan(Math.PI / 4);
                 for (int px = 0; px < 320; px++)

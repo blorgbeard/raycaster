@@ -7,10 +7,6 @@ using System.Threading.Tasks;
 
 namespace Raycaster
 {
-    class World
-    {
-    }
-
     struct RayIntersection2D
     {
         public float FirstRayDistance { get; private set; }
@@ -18,10 +14,7 @@ namespace Raycaster
 
         public bool Intersects
         {
-            get
-            {
-                return FirstRayDistance >= 0 && SecondRayDistance >= 0;
-            }
+            get { return FirstRayDistance >= 0 && SecondRayDistance >= 0; }
         }
 
         private void SetNoIntersect()
@@ -33,13 +26,6 @@ namespace Raycaster
         public RayIntersection2D(Ray one, Ray two)
             : this()
         {
-            /*
-            dx = bs.x - as.x
-            dy = bs.y - as.y
-            det = bd.x * ad.y - bd.y * ad.x
-            u = (dy * bd.x - dx * bd.y) / det
-            v = (dy * ad.x - dx * ad.y) / det
-            */
 
             var dx = two.Location.X - one.Location.X;
             var dy = two.Location.Y - one.Location.Y;
@@ -86,12 +72,6 @@ namespace Raycaster
         public float Length
         {
             get { return (float)Math.Sqrt(LengthSquared); }
-        }
-
-        [Obsolete("not a good idea, remove.", false)]
-        public float Gradient
-        {
-            get { return Y / X; }
         }
 
         public float Angle
@@ -156,68 +136,10 @@ namespace Raycaster
             Location = start;
             Direction = direction.Normalised();
         }
-
-        public float IntersectPlaneX(float y)
-        {
-            // y = mx + c
-            // y = y1 + m(x - x1)
-            // x = ((y - y1) / m) + x1
-            /*                       _...
-             *                   _ /
-             * _______________ /_____________ y
-             *            _ /  |
-             *        _ /      |
-             *      /          | x
-             *    *
-             *  x1,y1
-             */
-
-            var i = new RayIntersection2D(this, new Ray(new Vector2D(0, y), new Vector2D(1, 0)));
-            if (i.Intersects)
-            {
-                return i.FirstRayDistance;
-            }
-            return -1;
-            //return ((y - Start.Y) / Direction.Gradient) + Start.X;
-
-        }
-
-        public float IntersectPlaneY(float x)
-        {
-            // y = mx + c
-            // y = y1 + m(x - x1)
-            
-            /*                 |     _...
-             *                 | _ /
-             * _______________ /_____________ y
-             *            _ /  |
-             *        _ /      |
-             *      /          | x
-             *    *
-             *  x1,y1
-             */
-            var i = new RayIntersection2D(this, new Ray(new Vector2D(x, 0), new Vector2D(0, 1)));
-            if (i.Intersects)
-            {
-                return i.FirstRayDistance;
-            }
-            return -1;
-            //return Start.Y + (Direction.Gradient * (x - Start.X));
-        }
     }
 
     abstract class Shape2D
     {
-
-        protected float DistanceRayStartPointF(Ray ray, float x, float y)
-        {
-            float xd = x - ray.Location.X;
-            float yd = y - ray.Location.Y;
-            //return xd; //temp!
-            if (xd < 0) return -1;
-            if (yd < 0) return -1;
-            return (float)Math.Sqrt(xd * xd + yd * yd);
-        }
 
         //public abstract RectangleF BoundingBox { get; }
 
@@ -276,31 +198,7 @@ namespace Raycaster
                     return i.FirstRayDistance;
                 }
             }
-            /*
-
-            // can intersect right side if start.x > right
-            if (ray.Start.X > Bounds.Right)
-            {
-                var y = ray.IntersectPlaneY(Bounds.Right);
-                if (y >= Bounds.Top && y <= Bounds.Bottom)
-                {
-                    // intersects with right edge!
-                    return DistanceRayStartPointF(ray, Bounds.Right, y);
-                }
-            }
-
-            // can intersect with top side if start.y < top
-            if (ray.Start.Y < Bounds.Top)
-            {
-                var x = ray.IntersectPlaneX(Bounds.Top);
-                if (x >= Bounds.Left && x <= Bounds.Right)
-                {
-                    // intersects with bottom edge!
-                    return DistanceRayStartPointF(ray, x, Bounds.Top);
-                }
-            }
-
-             */
+            
             // must not intersect at all!
             return -1;
         }
