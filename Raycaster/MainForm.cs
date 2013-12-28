@@ -131,16 +131,13 @@ namespace Raycaster
                     if (hit != null)
                     {
                         // compensate for fish-eye effect:
-                        // project intersection point onto screen.
-                        var point = ray.Location + ray.Direction * closest;
-                        var pp = (perp.Location - point);
-                        var ppdn = pp.Dot(perp.Direction);
-                        var distance = Math.Abs((pp - (perp.Direction * ppdn)).Length);
-                        //
+                        // project intersection point onto camera direction.
+                        var point = ray.Direction * closest;          
+                        var distance = Vector2D.Projection(point, Player.Direction).Length;
 
 
                         hit.Hit = true;
-                        int sliceHeight = (int)Math.Min(240, Math.Max(0, Math.Abs(4000F / closest)));
+                        int sliceHeight = Math.Min(240, (int)(240F / distance * 10F));
                         int color = (int)(sliceHeight / 240F * 200);
                         Pen pen = new Pen(Color.FromArgb(hit.ColorIndex == 1 ? color : 0, color, color));
                         gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
