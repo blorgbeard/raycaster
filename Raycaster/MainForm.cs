@@ -10,7 +10,6 @@ using System.Windows.Forms;
 
 namespace Raycaster
 {    
-
     public partial class MainForm : Form
     {
 
@@ -89,7 +88,11 @@ namespace Raycaster
 
         private void tmrTick_Tick(object sender, EventArgs e)
         {
+            Render();
+        }
 
+        private void Render()
+        {
             foreach (var shape in Blocks)
                 shape.Hit = false;
 
@@ -98,14 +101,14 @@ namespace Raycaster
             {
                 gfx.Clear(Color.Cornsilk);
                 map.Clear(Color.White);
-                PaintMapBlocks(map);                
+                PaintMapBlocks(map);
 
                 float screenDistanceFromPlayer = 320F / (float)Math.Tan(Math.PI / 4);
                 for (int px = 0; px < 320; px++)
                 {
 
                     var perp = new Ray(
-                        Player.Location + (Player.Direction * screenDistanceFromPlayer), 
+                        Player.Location + (Player.Direction * screenDistanceFromPlayer),
                         new Vector2D(-Player.Direction.Y, Player.Direction.X));
 
                     var ray = new Ray(Player.Location,
@@ -126,8 +129,9 @@ namespace Raycaster
                         }
                     }
 
-                    if (hit != null) {
-                        hit.Hit = true;                                        
+                    if (hit != null)
+                    {
+                        hit.Hit = true;
                         int sliceHeight = (int)Math.Min(240, Math.Max(0, Math.Abs(2400F / closest)));
                         int color = (int)(sliceHeight / 240F * 200);
                         Pen pen = new Pen(Color.FromArgb(hit.ColorIndex == 1 ? color : 0, color, color));
@@ -143,57 +147,27 @@ namespace Raycaster
                 }
                 PaintMapPlayer(map);
             }
-            pictureBox1.Invalidate();
-            pictureBox2.Invalidate();
-            
+            pbMain.Invalidate();
+            pbMap.Invalidate();
+
         }
 
-        private void pictureBox1_Paint(object sender, PaintEventArgs e)
+        private void pbMain_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.DrawImageUnscaled(Buffer3D, 0, 0);            
         }
 
-        private void button1_Click(object sender, EventArgs e)
-        {
-            Player = new Ray(Player.Location + new Vector2D(-5, 0), Player.Direction);
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            Player = new Ray(Player.Location + new Vector2D(5, 0), Player.Direction);
-        }
-
-        private void button3_Click(object sender, EventArgs e)
-        {
-            Player = new Ray(Player.Location + new Vector2D(0, -5), Player.Direction);
-        }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            Player = new Ray(Player.Location + new Vector2D(0, 5), Player.Direction);
-        }
-
-        private void button6_Click(object sender, EventArgs e)
-        {
-            Player = new Ray(Player.Location, new Vector2D(Player.Direction.Angle - 0.314f));
-        }
-
-        private void button5_Click(object sender, EventArgs e)
-        {
-            Player = new Ray(Player.Location, new Vector2D(Player.Direction.Angle + 0.314f));
-        }
-
-        private void pictureBox2_Paint(object sender, PaintEventArgs e)
+        private void pbMap_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.DrawImageUnscaled(BufferMap, 0, 0);
         }
 
-        private void pictureBox2_MouseDown(object sender, MouseEventArgs e)
+        private void pbMap_MouseDown(object sender, MouseEventArgs e)
         {
             MovePlayerByMouse(e);
         }
 
-        private void pictureBox2_MouseMove(object sender, MouseEventArgs e)
+        private void pbMap_MouseMove(object sender, MouseEventArgs e)
         {
             MovePlayerByMouse(e);
         }
