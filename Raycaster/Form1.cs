@@ -112,7 +112,7 @@ namespace Raycaster
 
                     var perp = new Ray(
                         Player.Location + (Player.Direction * screenDistanceFromPlayer), 
-                        new Vector2D(-Player.Direction.Y, -Player.Direction.X));
+                        new Vector2D(-Player.Direction.Y, Player.Direction.X));
 
                     var ray = new Ray(Player.Location,
                         perp.Location +
@@ -140,6 +140,10 @@ namespace Raycaster
                         gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
 
                         map.DrawLine(pen, ray.Location, ray.Location + ray.Direction * closest);
+                    }
+                    else
+                    {
+                        map.DrawLine(Pens.LightGray, ray.Location, ray.Location + ray.Direction * 1000f);
                     }
 
                 }
