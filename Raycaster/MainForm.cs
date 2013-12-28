@@ -100,8 +100,7 @@ namespace Raycaster
             using (var gfx = Graphics.FromImage(Buffer3D))
             {
                 gfx.Clear(Color.Cornsilk);
-                map.Clear(Color.White);
-                PaintMapBlocks(map);
+                map.Clear(Color.White);                
 
                 float screenDistanceFromPlayer = 320F / (float)Math.Tan(Math.PI / 4);
                 for (int px = 0; px < 320; px++)
@@ -131,8 +130,17 @@ namespace Raycaster
 
                     if (hit != null)
                     {
+                        // compensate for fish-eye effect:
+                        // project intersection point onto screen.
+                        var point = ray.Location + ray.Direction * closest;
+                        var pp = (perp.Location - point);
+                        var ppdn = pp.Dot(perp.Direction);
+                        var distance = Math.Abs((pp - (perp.Direction * ppdn)).Length);
+                        //
+
+
                         hit.Hit = true;
-                        int sliceHeight = (int)Math.Min(240, Math.Max(0, Math.Abs(2400F / closest)));
+                        int sliceHeight = (int)Math.Min(240, Math.Max(0, Math.Abs(4000F / closest)));
                         int color = (int)(sliceHeight / 240F * 200);
                         Pen pen = new Pen(Color.FromArgb(hit.ColorIndex == 1 ? color : 0, color, color));
                         gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
@@ -145,6 +153,7 @@ namespace Raycaster
                     }
 
                 }
+                PaintMapBlocks(map);
                 PaintMapPlayer(map);
             }
             pbMain.Invalidate();

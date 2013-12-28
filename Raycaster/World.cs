@@ -124,6 +124,16 @@ namespace Raycaster
         {
             return new Vector2D(vector.X / magnitude, vector.Y / magnitude);
         }
+
+        public static float Dot(Vector2D first, Vector2D second)
+        {
+            return first.X * second.X + first.Y * second.Y;
+        }
+
+        public float Dot(Vector2D other)
+        {
+            return Dot(this, other);
+        }
     }
 
     struct Ray {
