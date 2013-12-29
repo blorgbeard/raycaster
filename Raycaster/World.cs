@@ -9,6 +9,12 @@ namespace Raycaster
 {
     struct RayIntersection2D
     {
+        public static readonly RayIntersection2D NoIntersection = new RayIntersection2D()
+        {
+            FirstRayDistance = float.MinValue,
+            SecondRayDistance = float.MinValue
+        };
+
         public float FirstRayDistance { get; private set; }
         public float SecondRayDistance { get; private set; }
 
@@ -40,7 +46,6 @@ namespace Raycaster
         }
     }
 
-
     struct Ray {
         public Vector2D Location { get; private set; }
         public Vector2D Direction { get; private set; }
@@ -53,69 +58,32 @@ namespace Raycaster
         }
     }
 
-    abstract class Shape2D
+    class Wall
     {
+        public Vector2D Point1 { get; set; }
+        public Vector2D Point2 { get; set; }
 
-        //public abstract RectangleF BoundingBox { get; }
-
-        public abstract float IntersectRay(Ray ray);
+        public Color Tint { get; set; }
 
         public bool Hit { get; set; }
-    }
 
-    class Rectangle2D : Shape2D
-    {
-        public RectangleF Bounds { get; set; }
-
-        public int ColorIndex { get; set; }
-
-        public override float IntersectRay(Ray ray)
+        public Wall(Vector2D start, Vector2D end, Color tint)
         {
-            // ray can possibly intersect 1 or 2 sides.
-            // which side(s) depends on where the ray start point is.
+            Point1 = start;
+            Point2 = end;
+            Tint = tint;
+        }
 
-            // can intersect left side if start.x < left
-            if (ray.Location.X < Bounds.Left)
+        public RayIntersection2D IntersectRay(Ray ray)
+        {
+            var wallVector = Point2 - Point1;
+            var i = new RayIntersection2D(ray, new Ray(Point1, wallVector));
+            if (i.Intersects && i.SecondRayDistance <= wallVector.Length)
             {
-                var i = new RayIntersection2D(ray, new Ray(Bounds.Location, Vector2D.South));
-                if (i.Intersects && i.SecondRayDistance <= Bounds.Size.Height)
-                {
-                    return i.FirstRayDistance;
-                }
+                return i;
             }
-            
-            // can intersect with bottom side if start.y > bottom
-            if (ray.Location.Y > Bounds.Bottom)
-            {
-                var i = new RayIntersection2D(ray, new Ray(new Vector2D(Bounds.Left, Bounds.Bottom), Vector2D.East));
-                if (i.Intersects && i.SecondRayDistance <= Bounds.Size.Width)
-                {
-                    return i.FirstRayDistance;
-                }
-            }
-
-            // can intersect right side if start.x > right
-            if (ray.Location.X > Bounds.Right)
-            {
-                var i = new RayIntersection2D(ray, new Ray(new Vector2D(Bounds.Right, Bounds.Bottom), Vector2D.North));
-                if (i.Intersects && i.SecondRayDistance <= Bounds.Size.Width)
-                {
-                    return i.FirstRayDistance;
-                }
-            }
-
-            // can intersect with top side if start.y < top
-            if (ray.Location.Y < Bounds.Top)
-            {
-                var i = new RayIntersection2D(ray, new Ray(Bounds.Location, Vector2D.East));
-                if (i.Intersects && i.SecondRayDistance <= Bounds.Size.Height)
-                {
-                    return i.FirstRayDistance;
-                }
-            }
-            
-            // must not intersect at all!
-            return -1;
+            else return RayIntersection2D.NoIntersection;
         }
     }
+
 }

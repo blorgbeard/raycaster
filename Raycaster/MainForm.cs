@@ -13,26 +13,27 @@ namespace Raycaster
     public partial class MainForm : Form
     {
 
-        List<Rectangle2D> Blocks;
+        List<Wall> Walls;
 
         Ray Player;
 
         Bitmap Buffer3D = new Bitmap(320, 240);
         Bitmap BufferMap = new Bitmap(240, 240);
 
-        private List<Rectangle2D> BuildBlocksFromMap(byte[,] map)
+        private List<Wall> BuildBlocksFromMap(byte[,] map)
         {
-            var result = new List<Rectangle2D>();
+            var colors = new[] { Color.Green, Color.Blue};
+            var result = new List<Wall>();
             for (int y = 0; y < map.GetLength(0); y++)
             {
                 for (int x = 0; x < map.GetLength(1); x++)
                 {
                     if (map[y, x] != 0)
                     {
-                        result.Add(new Rectangle2D() { 
-                            ColorIndex = map[y,x],
-                            Bounds = new RectangleF(x * 10, y * 10, 10, 10) 
-                        });
+                        result.Add(new Wall(new Vector2D(x*10f, y*10f), new Vector2D(x*10f + 10f, y*10f), colors[map[y,x]-1]));
+                        result.Add(new Wall(new Vector2D(x*10f + 10f, y*10f), new Vector2D(x*10f + 10f, y*10f + 10f), colors[map[y,x]-1]));
+                        result.Add(new Wall(new Vector2D(x*10f + 10f, y*10f + 10f), new Vector2D(x*10f, y*10f + 10f), colors[map[y,x]-1]));
+                        result.Add(new Wall(new Vector2D(x*10f, y*10f + 10f), new Vector2D(x*10f, y*10f), colors[map[y,x]-1]));
                     }
                 }
             }
@@ -68,16 +69,16 @@ namespace Raycaster
                 
             };
 
-            Blocks = BuildBlocksFromMap(map);
+            Walls = BuildBlocksFromMap(map);
 
             Player = new Ray(new Vector2D(50, 50), new Vector2D(1, 0));
         }
 
         private void PaintMapBlocks(Graphics g)
         {            
-            foreach (var shape in Blocks.OfType<Rectangle2D>())
+            foreach (var shape in Walls)
             {
-                g.FillRectangle(shape.Hit ? Brushes.Red : Brushes.Black, shape.Bounds);
+                g.DrawLine(shape.Hit ? Pens.Red : Pens.Black, shape.Point1, shape.Point2);
             }            
         }
 
@@ -93,7 +94,7 @@ namespace Raycaster
 
         private void Render()
         {
-            foreach (var shape in Blocks)
+            foreach (var shape in Walls)
                 shape.Hit = false;
 
             using (var map = Graphics.FromImage(BufferMap))
@@ -116,11 +117,12 @@ namespace Raycaster
                         Player.Location);
 
                     float closest = -1;
-                    Rectangle2D hit = null;
-                    foreach (var shape in Blocks)
+                    Wall hit = null;
+                    foreach (var shape in Walls)
                     {
-                        var d = shape.IntersectRay(ray);
-                        if (d < 0) continue;
+                        var i = shape.IntersectRay(ray);
+                        if (!i.Intersects) continue;
+                        var d = i.FirstRayDistance;
                         if (d < closest || closest < 0)
                         {
                             closest = d;
@@ -135,14 +137,15 @@ namespace Raycaster
                         var point = ray.Direction * closest;          
                         var distance = Vector2D.Projection(point, Player.Direction).Length;
 
+                        if (distance == 0) distance = float.Epsilon;
 
                         hit.Hit = true;
-                        int sliceHeight = Math.Min(240, (int)(240F / distance * 10F));
-                        int color = (int)(sliceHeight / 240F * 200);
-                        Pen pen = new Pen(Color.FromArgb(hit.ColorIndex == 1 ? color : 0, color, color));
+                        int sliceHeight = Math.Max(Math.Min(240, (int)(240F / distance * 10F)), 0);
+                        float lightness = ((sliceHeight / 240F * 200) + 20) / 255f;
+                        Pen pen = new Pen(SetLightness(hit.Tint, lightness));
                         gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
 
-                        map.DrawLine(pen, ray.Location, ray.Location + ray.Direction * closest);
+                        map.DrawLine(new Pen(hit.Tint), ray.Location, ray.Location + ray.Direction * closest);
                     }
                     else
                     {
@@ -156,6 +159,11 @@ namespace Raycaster
             pbMain.Invalidate();
             pbMap.Invalidate();
 
+        }
+
+        private Color SetLightness(Color color, float lightness)
+        {
+            return Color.FromArgb((int)(color.R * lightness), (int)(color.G * lightness), (int)(color.B * lightness));
         }
 
         private void pbMain_Paint(object sender, PaintEventArgs e)

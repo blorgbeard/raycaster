@@ -54,7 +54,6 @@
     <Compile Include="Vector2DTest.cs" />
     <Compile Include="RayTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Rectangle2DTest.cs" />
     <Compile Include="Intersection2DTest.cs" />
   </ItemGroup>
   <ItemGroup>
