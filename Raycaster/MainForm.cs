@@ -76,10 +76,14 @@ namespace Raycaster
 
         private void PaintMapBlocks(Graphics g)
         {            
-            foreach (var shape in Walls)
+            foreach (var shape in GetWalls())
             {
-                g.DrawLine(shape.Hit ? Pens.Red : Pens.Black, shape.Point1, shape.Point2);
-            }            
+                g.DrawLine(shape.Hit ? Pens.Blue: Pens.Black, shape.Point1, shape.Point2);
+            }
+            if (_ErasingWall != null)
+            {
+                g.DrawLine(Pens.Red, _ErasingWall.Point1, _ErasingWall.Point2);
+            }
         }
 
         private void PaintMapPlayer(Graphics g)
@@ -118,7 +122,7 @@ namespace Raycaster
 
                     float closest = -1;
                     Wall hit = null;
-                    foreach (var shape in Walls)
+                    foreach (var shape in GetWalls())
                     {
                         var i = shape.IntersectRay(ray);
                         if (!i.Intersects) continue;
@@ -161,6 +165,11 @@ namespace Raycaster
 
         }
 
+        private IEnumerable<Wall> GetWalls()
+        {
+            return Walls.Union(new[] { _DrawingWall }.Except(new Wall[] { null }));
+        }
+
         private Color SetLightness(Color color, float lightness)
         {
             return Color.FromArgb((int)(color.R * lightness), (int)(color.G * lightness), (int)(color.B * lightness));
@@ -176,14 +185,65 @@ namespace Raycaster
             e.Graphics.DrawImageUnscaled(BufferMap, 0, 0);
         }
 
+        private Wall _DrawingWall = null;
+        private Wall _ErasingWall = null;
+
         private void pbMap_MouseDown(object sender, MouseEventArgs e)
         {
-            MovePlayerByMouse(e);
+            if (radMovePlayer.Checked)
+            {
+                MovePlayerByMouse(e);
+            }
+            else if (radDrawWalls.Checked)
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    _DrawingWall = new Wall(e.Location, e.Location, Color.Orange);
+                }
+                else if (e.Button == MouseButtons.Right)
+                {
+                    _ErasingWall = new Wall(e.Location, e.Location, Color.Empty);
+                }
+            }
         }
 
         private void pbMap_MouseMove(object sender, MouseEventArgs e)
         {
-            MovePlayerByMouse(e);
+            if (radMovePlayer.Checked)
+            {
+                MovePlayerByMouse(e);
+            }
+            else if (radDrawWalls.Checked)
+            {
+                if (e.Button == MouseButtons.Left && _DrawingWall != null)
+                {
+                    _DrawingWall.Point2 = e.Location;
+                }
+                else if (e.Button == MouseButtons.Right && _ErasingWall != null)
+                {
+                    _ErasingWall.Point1 = _ErasingWall.Point2;
+                    _ErasingWall.Point2 = e.Location;
+                    foreach (var wall in Walls.ToArray())
+                    {
+                        if (wall.IntersectWall(_ErasingWall).Intersects)
+                        {
+                            Walls.Remove(wall);
+                        }
+                    }                    
+                }
+            }
+        }
+
+        private void pbMap_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (radDrawWalls.Checked && e.Button == MouseButtons.Left && _DrawingWall != null)
+            {
+                _DrawingWall.Point2 = e.Location;
+                _DrawingWall.Tint = Color.DarkOrange;
+                Walls.Add(_DrawingWall);             
+            }
+            _DrawingWall = null;
+            _ErasingWall = null;
         }
 
         private void MovePlayerByMouse(MouseEventArgs e)
@@ -197,5 +257,6 @@ namespace Raycaster
                 Player = new Ray(Player.Location, e.Location - Player.Location);
             }
         }
+
     }
 }

@@ -84,6 +84,23 @@ namespace Raycaster
             }
             else return RayIntersection2D.NoIntersection;
         }
+
+        public RayIntersection2D IntersectWall(Wall other)
+        {
+            var wallVector = Point2 - Point1;
+            var otherVector = other.Point2 - other.Point1;            
+            var i = new RayIntersection2D(new Ray(other.Point1, otherVector), new Ray(Point1, wallVector));
+            if (i.Intersects && i.FirstRayDistance <= otherVector.Length && i.SecondRayDistance <= wallVector.Length)
+            {
+                return i;
+            }
+            else return RayIntersection2D.NoIntersection;
+        }
+
+        public float Length
+        {
+            get { return (Point2 - Point1).Length; }
+        }
     }
 
 }
