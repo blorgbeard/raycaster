@@ -97,11 +97,15 @@ namespace Raycaster
 
         private void tmrTick_Tick(object sender, EventArgs e)
         {
+            tmrTick.Enabled = false;
             Render();
+            tmrTick.Enabled = true;
         }
 
         private void Render()
         {
+            var tStart = DateTime.Now;
+
             foreach (var shape in Walls)
                 shape.Hit = false;
 
@@ -153,23 +157,28 @@ namespace Raycaster
 
                         hitWall.Hit = true;
                         int sliceHeight = Math.Max(0, Math.Min(240, (int)(240F / distance * 10F)));
-                        
-                        var tx = (int)(Math.Abs(hit.SecondRayDistance) / hitWall.Length * Bricks.Width);
-                        gfx.DrawImage(
-                            Bricks,
-                            new Rectangle(px, 120 - (sliceHeight / 2), 1, sliceHeight),
-                            new Rectangle(tx, 0, 1, Bricks.Height),
-                            GraphicsUnit.Pixel);
-
-
                         float lightness = ((sliceHeight / 240F * 200) + 20) / 255f;
-                        
-                        // tint looks weird
-                        //Pen pen = new Pen(Color.FromArgb(128, hitWall.Tint));
-                        //gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
-                        
-                        Pen pen = new Pen(Color.FromArgb((int)(240 * (1f - lightness)), Color.Black));
-                        gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+
+                        if (chkTextures.Checked)
+                        {
+
+                            var tx = (int)(Math.Abs(hit.SecondRayDistance) / hitWall.Length * Bricks.Width);
+                            gfx.DrawImage(
+                                Bricks,
+                                new Rectangle(px, 120 - (sliceHeight / 2), 1, sliceHeight),
+                                new Rectangle(tx, 0, 1, Bricks.Height),
+                                GraphicsUnit.Pixel);
+
+                            Pen pen = new Pen(Color.FromArgb((int)(240 * (1f - lightness)), Color.Black));
+                            gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+
+                        }
+                        else
+                        {
+                            // tint looks weird with textures..
+                            Pen pen = new Pen(SetLightness(hitWall.Tint, lightness));
+                            gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+                        }
                         
                         map.DrawLine(new Pen(hitWall.Tint), ray.Location, ray.Location + ray.Direction * closest);
                     }
@@ -184,6 +193,9 @@ namespace Raycaster
             }
             pbMain.Invalidate();
             pbMap.Invalidate();
+
+            var spf = DateTime.Now - tStart;
+            txtInfo.Text = string.Format("ms to render: {0}", spf.TotalMilliseconds);
 
         }
 
@@ -278,6 +290,11 @@ namespace Raycaster
             {
                 Player = new Ray(Player.Location, e.Location - Player.Location);
             }
+        }
+
+        private void btnClearWalls_Click(object sender, EventArgs e)
+        {
+            Walls.Clear();
         }
 
     }

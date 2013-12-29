@@ -34,6 +34,9 @@
             this.pbMap = new System.Windows.Forms.PictureBox();
             this.radMovePlayer = new System.Windows.Forms.RadioButton();
             this.radDrawWalls = new System.Windows.Forms.RadioButton();
+            this.txtInfo = new System.Windows.Forms.TextBox();
+            this.chkTextures = new System.Windows.Forms.CheckBox();
+            this.btnClearWalls = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pbMain)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbMap)).BeginInit();
             this.SuspendLayout();
@@ -90,11 +93,45 @@
             this.radDrawWalls.Text = "Build / Destroy";
             this.radDrawWalls.UseVisualStyleBackColor = true;
             // 
+            // txtInfo
+            // 
+            this.txtInfo.Location = new System.Drawing.Point(13, 259);
+            this.txtInfo.Multiline = true;
+            this.txtInfo.Name = "txtInfo";
+            this.txtInfo.ReadOnly = true;
+            this.txtInfo.Size = new System.Drawing.Size(319, 138);
+            this.txtInfo.TabIndex = 2;
+            // 
+            // chkTextures
+            // 
+            this.chkTextures.AutoSize = true;
+            this.chkTextures.Checked = true;
+            this.chkTextures.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkTextures.Location = new System.Drawing.Point(338, 282);
+            this.chkTextures.Name = "chkTextures";
+            this.chkTextures.Size = new System.Drawing.Size(58, 17);
+            this.chkTextures.TabIndex = 3;
+            this.chkTextures.Text = "Bricks!";
+            this.chkTextures.UseVisualStyleBackColor = true;
+            // 
+            // btnClearWalls
+            // 
+            this.btnClearWalls.Location = new System.Drawing.Point(501, 282);
+            this.btnClearWalls.Name = "btnClearWalls";
+            this.btnClearWalls.Size = new System.Drawing.Size(75, 23);
+            this.btnClearWalls.TabIndex = 4;
+            this.btnClearWalls.Text = "Nuke";
+            this.btnClearWalls.UseVisualStyleBackColor = true;
+            this.btnClearWalls.Click += new System.EventHandler(this.btnClearWalls_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(588, 287);
+            this.ClientSize = new System.Drawing.Size(588, 409);
+            this.Controls.Add(this.btnClearWalls);
+            this.Controls.Add(this.chkTextures);
+            this.Controls.Add(this.txtInfo);
             this.Controls.Add(this.radDrawWalls);
             this.Controls.Add(this.radMovePlayer);
             this.Controls.Add(this.pbMap);
@@ -115,6 +152,9 @@
         private System.Windows.Forms.PictureBox pbMap;
         private System.Windows.Forms.RadioButton radMovePlayer;
         private System.Windows.Forms.RadioButton radDrawWalls;
+        private System.Windows.Forms.TextBox txtInfo;
+        private System.Windows.Forms.CheckBox chkTextures;
+        private System.Windows.Forms.Button btnClearWalls;
     }
 }
 
