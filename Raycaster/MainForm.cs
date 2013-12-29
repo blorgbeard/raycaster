@@ -20,6 +20,8 @@ namespace Raycaster
         Bitmap Buffer3D = new Bitmap(320, 240);
         Bitmap BufferMap = new Bitmap(240, 240);
 
+        Image Bricks;
+
         private List<Wall> BuildBlocksFromMap(byte[,] map)
         {
             var colors = new[] { Color.Green, Color.Blue};
@@ -72,6 +74,8 @@ namespace Raycaster
             Walls = BuildBlocksFromMap(map);
 
             Player = new Ray(new Vector2D(50, 50), new Vector2D(1, 0));
+
+            Bricks = ResourceLoader.GetTexture("brick1.png");
         }
 
         private void PaintMapBlocks(Graphics g)
@@ -121,7 +125,8 @@ namespace Raycaster
                         Player.Location);
 
                     float closest = -1;
-                    Wall hit = null;
+                    Wall hitWall = null;
+                    RayIntersection2D hit = new RayIntersection2D();
                     foreach (var shape in GetWalls())
                     {
                         var i = shape.IntersectRay(ray);
@@ -130,11 +135,12 @@ namespace Raycaster
                         if (d < closest || closest < 0)
                         {
                             closest = d;
-                            hit = shape;
+                            hitWall = shape;
+                            hit = i;
                         }
                     }
 
-                    if (hit != null)
+                    if (hitWall != null)
                     {
                         // compensate for fish-eye effect:
                         // project intersection point onto camera direction.
@@ -143,13 +149,27 @@ namespace Raycaster
 
                         if (distance == 0) distance = float.Epsilon;
 
-                        hit.Hit = true;
-                        int sliceHeight = Math.Max(Math.Min(240, (int)(240F / distance * 10F)), 0);
-                        float lightness = ((sliceHeight / 240F * 200) + 20) / 255f;
-                        Pen pen = new Pen(SetLightness(hit.Tint, lightness));
-                        gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+                        hitWall.Hit = true;
+                        int sliceHeight = Math.Max(0, Math.Min(240, (int)(240F / distance * 10F)));
+                        
+                        var tx = (int)(Math.Abs(hit.SecondRayDistance) / hitWall.Length * Bricks.Width);
+                        gfx.DrawImage(
+                            Bricks,
+                            new Rectangle(px, 120 - (sliceHeight / 2), 1, sliceHeight),
+                            new Rectangle(tx, 0, 1, Bricks.Height),
+                            GraphicsUnit.Pixel);
 
-                        map.DrawLine(new Pen(hit.Tint), ray.Location, ray.Location + ray.Direction * closest);
+
+                        float lightness = ((sliceHeight / 240F * 200) + 20) / 255f;
+                        
+                        // tint looks weird
+                        //Pen pen = new Pen(Color.FromArgb(128, hitWall.Tint));
+                        //gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+                        
+                        Pen pen = new Pen(Color.FromArgb((int)(240 * (1f - lightness)), Color.Black));
+                        gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+                        
+                        map.DrawLine(new Pen(hitWall.Tint), ray.Location, ray.Location + ray.Direction * closest);
                     }
                     else
                     {
