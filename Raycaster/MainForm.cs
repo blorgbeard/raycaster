@@ -82,7 +82,7 @@ namespace Raycaster
         {            
             foreach (var shape in GetWalls())
             {
-                g.DrawLine(shape.Hit ? Pens.Blue: Pens.Black, shape.Point1, shape.Point2);
+                g.DrawLine(shape.Hit ? Pens.Red: Pens.Black, shape.Point1, shape.Point2);
             }
             if (_ErasingWall != null)
             {
@@ -109,6 +109,8 @@ namespace Raycaster
             using (var gfx = Graphics.FromImage(Buffer3D))
             {
                 gfx.Clear(Color.Cornsilk);
+                gfx.FillRectangle(Brushes.OliveDrab, 0, 120, 320, 120);
+
                 map.Clear(Color.White);                
 
                 float screenDistanceFromPlayer = 320F / (float)Math.Tan(Math.PI / 4);
