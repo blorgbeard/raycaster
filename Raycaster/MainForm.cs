@@ -1,4 +1,7 @@
-﻿using System;
+﻿using dx = SharpDX;
+using dx2d = SharpDX.Direct2D1;
+using dxgi = SharpDX.DXGI;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -13,16 +16,24 @@ namespace Raycaster
     public partial class MainForm : Form
     {
 
+
+        
+        
         List<Wall> Walls;
+
+        List<QuadNode> Quads;
 
         Ray Player;
 
-        Bitmap Buffer3D = new Bitmap(320, 240);
+        public dx2d.WindowRenderTarget Target2D { get; private set; }        
+
         Bitmap BufferMap = new Bitmap(240, 240);
 
-        Image Bricks;
+        dx2d.Brush solidBlackBrush;
 
-        private List<Wall> BuildBlocksFromMap(byte[,] map)
+        //System.Drawing.Image Bricks;
+
+        private List<Wall> BuildWallsFromMap(byte[,] map)
         {
             var colors = new[] { Color.Green, Color.Blue};
             var result = new List<Wall>();
@@ -40,6 +51,58 @@ namespace Raycaster
                 }
             }
             return result;
+        }
+
+        private bool QuadContainsPoint(Vector2D topLeft, Vector2D bottomRight, Vector2D point)
+        {
+            return
+                (point.X >= topLeft.X) &&
+                (point.X <= bottomRight.X) &&
+                (point.Y >= topLeft.Y) &&
+                (point.Y <= bottomRight.Y);
+        }
+
+        private bool QuadContainsWall(Vector2D topLeft, Vector2D bottomRight, Wall wall)
+        {
+            if (QuadContainsPoint(topLeft, bottomRight, wall.Point1) || QuadContainsPoint(topLeft, bottomRight, wall.Point2))
+                return true;
+
+            // might also overlap corner without either point being inside.
+            // todo!
+            return false;
+        }
+
+        private QuadNode BuildQuads(Vector2D topLeft, Vector2D bottomRight)
+        {
+            if ((bottomRight - topLeft).Length <= trkQuadSize.Value)
+            {
+                // leaf times
+                var children = Walls.Where(t => QuadContainsWall(topLeft, bottomRight, t)).ToList();
+                WallsPerQuad.Add(children.Count);
+                return new QuadNode(topLeft, bottomRight, children);
+            }
+            else
+            {
+                // node times
+                var centre = new Vector2D(
+                    topLeft.X + ((bottomRight.X - topLeft.X) / 2f), 
+                    topLeft.Y + ((bottomRight.Y - topLeft.Y) / 2f));
+
+                var q1 = BuildQuads(topLeft, centre);                
+                var q2 = BuildQuads(new Vector2D(centre.X, topLeft.Y), new Vector2D(bottomRight.X, centre.Y));                
+                var q3 = BuildQuads(new Vector2D(topLeft.X, centre.Y), new Vector2D(centre.X, bottomRight.Y));
+                var q4 = BuildQuads(centre, bottomRight);
+                var children = new[] { q1, q2, q3, q4 }.Where(t => t.ChildNodes.Any() || t.ChildWalls.Any());
+                return new QuadNode(topLeft, bottomRight, children);
+            }
+        }
+
+        private readonly List<int> WallsPerQuad = new List<int>();
+
+
+        private void trkQuadSize_Scroll(object sender, EventArgs e)
+        {
+            RebuildQuads();
         }
 
         public MainForm()
@@ -71,11 +134,28 @@ namespace Raycaster
                 
             };
 
-            Walls = BuildBlocksFromMap(map);
+            Walls = BuildWallsFromMap(map);
+            RebuildQuads();
+
+
 
             Player = new Ray(new Vector2D(50, 50), new Vector2D(1, 0));
 
-            Bricks = ResourceLoader.GetTexture("brick1.png");
+
+
+            //Bricks = ResourceLoader.GetTexture("brick1.png");
+        }
+
+        private void RebuildQuads()
+        {
+            WallsPerQuad.Clear();
+            Quads = new List<QuadNode> {
+                BuildQuads(new Vector2D(0, 0), new Vector2D(320, 240))
+            };
+            txtQuadInfo.Text = string.Format(
+                "Average walls per quad: {0:0.00}\r\nNumber of leaf quads: {1}",
+                WallsPerQuad.Average(),
+                WallsPerQuad.Count);
         }
 
         private void PaintMapBlocks(Graphics g)
@@ -87,6 +167,15 @@ namespace Raycaster
             if (_ErasingWall != null)
             {
                 g.DrawLine(Pens.Red, _ErasingWall.Point1, _ErasingWall.Point2);
+            }
+            Stack<QuadNode> s = new Stack<QuadNode>();
+            s.Push(Quads[0]);
+            while (s.Any())
+            {
+                var q = s.Pop();
+                g.DrawRectangle(Pens.Aqua, q.Bounds.X, q.Bounds.Y, q.Bounds.Width, q.Bounds.Height);
+                foreach (var qq in q.ChildNodes)
+                    s.Push(qq);
             }
         }
 
@@ -102,20 +191,43 @@ namespace Raycaster
             tmrTick.Enabled = true;
         }
 
+        private IEnumerable<Wall> GetPossibleHitWalls(Ray ray, IEnumerable<QuadNode> quads)
+        {
+            foreach (var quad in quads)
+            {
+                if (quad.Intersects(ray))
+                {
+                    foreach (var wall in quad.ChildWalls)
+                    {                        
+                        yield return wall;
+                    }
+                    foreach (var wall in GetPossibleHitWalls(ray, quad.ChildNodes))
+                        yield return wall;
+                }
+            }
+        }
+
         private void Render()
         {
             var tStart = DateTime.Now;
+            TimeSpan tsHitCheck = TimeSpan.Zero;
+            TimeSpan tsPainting = TimeSpan.Zero;
 
             foreach (var shape in Walls)
                 shape.Hit = false;
 
-            using (var map = Graphics.FromImage(BufferMap))
-            using (var gfx = Graphics.FromImage(Buffer3D))
-            {
-                gfx.Clear(Color.Cornsilk);
-                gfx.FillRectangle(Brushes.OliveDrab, 0, 120, 320, 120);
+            Target2D.BeginDraw();
 
-                map.Clear(Color.White);                
+            Target2D.Clear(dx.Color.Cornsilk);
+            Target2D.FillRectangle(
+                new dx.RectangleF(0, 120, 320, 120),
+                new dx2d.SolidColorBrush(Target2D, dx.Color.OliveDrab));
+            
+
+            using (var map = Graphics.FromImage(BufferMap))            
+            {                
+                map.Clear(Color.White);
+                Wall hitWall = null;
 
                 float screenDistanceFromPlayer = 320F / (float)Math.Tan(Math.PI / 4);
                 for (int px = 0; px < 320; px++)
@@ -130,10 +242,11 @@ namespace Raycaster
                         (perp.Direction * (px - 160)) -
                         Player.Location);
 
-                    float closest = -1;
-                    Wall hitWall = null;
+                    var tStartHitCheck = DateTime.Now;
+
+                    float closest = -1;                    
                     RayIntersection2D hit = new RayIntersection2D();
-                    foreach (var shape in GetWalls())
+                    foreach (var shape in /*GetWalls()*/ GetPossibleHitWalls(ray, Quads))
                     {
                         var i = shape.IntersectRay(ray);
                         if (!i.Intersects) continue;
@@ -145,6 +258,8 @@ namespace Raycaster
                             hit = i;
                         }
                     }
+
+                    tsHitCheck += (DateTime.Now - tStartHitCheck);
 
                     if (hitWall != null)
                     {
@@ -162,6 +277,7 @@ namespace Raycaster
                         if (chkTextures.Checked)
                         {
 
+                            /*
                             var tx = (int)(Math.Abs(hit.SecondRayDistance) / hitWall.Length * Bricks.Width);
                             gfx.DrawImage(
                                 Bricks,
@@ -171,13 +287,17 @@ namespace Raycaster
 
                             Pen pen = new Pen(Color.FromArgb((int)(240 * (1f - lightness)), Color.Black));
                             gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
-
+                            */
                         }
                         else
                         {
                             // tint looks weird with textures..
-                            Pen pen = new Pen(SetLightness(hitWall.Tint, lightness));
-                            gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+                            //Pen pen = new Pen(SetLightness(hitWall.Tint, lightness));
+                            //gfx.DrawLine(pen, px, 120 - (sliceHeight / 2), px, 120 + (sliceHeight / 2));
+                            Target2D.DrawLine(
+                                new dx.Vector2(px, 120 - (sliceHeight / 2)),
+                                new dx.Vector2(px, 120 + (sliceHeight / 2)),
+                                solidBlackBrush);
                         }
                         
                         map.DrawLine(new Pen(hitWall.Tint), ray.Location, ray.Location + ray.Direction * closest);
@@ -188,15 +308,18 @@ namespace Raycaster
                     }
 
                 }
+
+                var spf = DateTime.Now - tStart;
+                txtInfo.Text = string.Format("ms to render: {0}\r\nms to hitcheck: {1}",
+                    spf.TotalMilliseconds, tsHitCheck.TotalMilliseconds);
+
                 PaintMapBlocks(map);
                 PaintMapPlayer(map);
             }
-            pbMain.Invalidate();
-            pbMap.Invalidate();
-
-            var spf = DateTime.Now - tStart;
-            txtInfo.Text = string.Format("ms to render: {0}", spf.TotalMilliseconds);
-
+            
+            Target2D.EndDraw();
+            pbMap.Invalidate();            
+                        
         }
 
         private IEnumerable<Wall> GetWalls()
@@ -211,7 +334,7 @@ namespace Raycaster
 
         private void pbMain_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.DrawImageUnscaled(Buffer3D, 0, 0);            
+            //e.Graphics.DrawImageUnscaled(Buffer3D, 0, 0);            
         }
 
         private void pbMap_Paint(object sender, PaintEventArgs e)
@@ -296,6 +419,30 @@ namespace Raycaster
         {
             Walls.Clear();
         }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            var Factory2D = new SharpDX.Direct2D1.Factory();
+
+            var properties = new dx2d.HwndRenderTargetProperties();
+            properties.Hwnd = dxRender.Handle;
+            properties.PixelSize = new dx.Size2(dxRender.ClientSize.Width, dxRender.ClientSize.Height);
+            properties.PresentOptions = dx2d.PresentOptions.None;
+
+            Target2D = new dx2d.WindowRenderTarget(
+                Factory2D, 
+                new dx2d.RenderTargetProperties(
+                    new dx2d.PixelFormat(dxgi.Format.Unknown, dx2d.AlphaMode.Ignore)), properties);
+            Target2D.AntialiasMode = dx2d.AntialiasMode.Aliased;            
+            
+            solidBlackBrush = new dx2d.SolidColorBrush(Target2D, dx.Color.Black);
+        }
+
+        private void dxRender_Paint(object sender, PaintEventArgs e)
+        {
+           
+        }
+
 
     }
 }

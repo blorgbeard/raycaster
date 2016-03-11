@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace Raycaster
 {
-
     struct Vector2D
     {
         public float X { get; private set; }
